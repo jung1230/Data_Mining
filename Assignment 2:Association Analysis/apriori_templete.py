@@ -1,6 +1,6 @@
 from __future__ import print_function
 import sys
-
+from itertools import combinations
 
 
 def apriori(dataset, min_support=0.5, verbose=False):
@@ -33,10 +33,15 @@ def apriori(dataset, min_support=0.5, verbose=False):
            Rules", 1994.
 
     """
-    C1 = create_candidates(dataset)
-    D = list(map(set, dataset))
+    C1 = create_candidates(dataset) ## [frozenset({'Apple'}), frozenset({'Corn'}), frozenset({'Doll'}), frozenset({'Eggs'}), frozenset({'Ice-cream'}), frozenset({'Key-chain'}), frozenset({'Mango'}), frozenset({'Nintendo'}), frozenset({'Onion'}), frozenset({'Umbrella'}), frozenset({'Yo-yo'})]
+
+    # this is the dataset D as a list of sets
+    D = list(map(set, dataset)) ## [{'Yo-yo', 'Mango', 'Ice-cream', 'Umbrella', 'Corn', 'Key-chain'}, {'Doll', 'Mango', 'Umbrella', 'Eggs', 'Onion', 'Key-chain'}, {'Yo-yo', 'Mango', 'Ice-cream', 'Eggs', 'Onion', 'Key-chain'}, {'Yo-yo', 'Eggs', 'Corn', 'Onion', 'Key-chain'}, {'Doll', 'Mango', 'Nintendo', 'Onion', 'Apple'}]
+
     F1, support_data = get_freq(D, C1, min_support, verbose=False) # get frequent 1-itemsets
+
     F = [F1] # list of frequent itemsets; initialized to frequent 1-itemsets
+
     k = 2 # the itemset cardinality
     while (len(F[k - 2]) > 0):
         Ck = apriori_gen(F[k-2], k) # generate candidate itemsets
@@ -51,6 +56,11 @@ def apriori(dataset, min_support=0.5, verbose=False):
             for item in kset:
                 print(""                     + "{"                     + "".join(str(i) + ", " for i in iter(item)).rstrip(', ')                     + "}"                     + ":  sup = " + str(round(support_data[item], 3)))
 
+        # print all candidate itemsets
+        print("\n\nAll candidate itemsets:")
+        for key in support_data:
+            print(""             + "{"             + "".join(str(i) + ", " for i in iter(key)).rstrip(', ')             + "}"             + ":  sup = "
+                  + str(round(support_data[key], 3)))
     return F, support_data
 
 def create_candidates(dataset, verbose=False):
@@ -109,6 +119,34 @@ def get_freq(dataset, candidates, min_support, verbose=False):
     """
 
     # TODO
+    freq_list = []
+    support_data = {}
+
+    # get support count for each candidate
+    for transaction in dataset:
+        for candidate in candidates:
+            if candidate.issubset(transaction):
+                if candidate in support_data:
+                    support_data[candidate] += 1
+                else:
+                    # use update method to add new candidate to support_data
+                    support_data.update({candidate: 1}) 
+
+    # After getting the support count, calculate the support and filter out the infrequent itemsets
+    for key in support_data:
+        # support = (support count) / (total number of transactions)
+        support_data[key] /= len(dataset)
+        if support_data[key] >= min_support:
+            freq_list.append(key)
+
+    # print("support_data:")
+    # print(support_data) ## {frozenset({'Corn'}): 0.4, frozenset({'Ice-cream'}): 0.4, frozenset({'Key-chain'}): 0.8, frozenset({'Mango'}): 0.8, frozenset({'Umbrella'}): 0.4, frozenset({'Yo-yo'}): 0.6, frozenset({'Doll'}): 0.4, frozenset({'Eggs'}): 0.6, frozenset({'Onion'}): 0.8, frozenset({'Apple'}): 0.2, frozenset({'Nintendo'}): 0.2}
+    # print("frequent itemsets:")
+    # print(freq_list) ## [frozenset({'Key-chain'}), frozenset({'Mango'}), frozenset({'Yo-yo'}), frozenset({'Eggs'}), frozenset({'Onion'})]
+
+
+    return freq_list, support_data
+
 
 def apriori_gen(freq_sets, k):
     """Generates candidate itemsets (via the F_k-1 x F_k-1 method).
@@ -134,6 +172,66 @@ def apriori_gen(freq_sets, k):
         The list of candidate itemsets.
     """
     # TODO
+    candidate_list = []
+    # print(freq_sets) ## [frozenset({'Key-chain'}), frozenset({'Mango'}), frozenset({'Yo-yo'}), frozenset({'Eggs'}), frozenset({'Onion'})]
+    
+    # Generate length k candidate itemsets from length k-1 frequent itemsets (F_k-1 x F_k-1)
+    for i in range(len(freq_sets)):
+        for j in range(i+1, len(freq_sets)):
+            first = list(freq_sets[i])
+            second = list(freq_sets[j])
+            # print(first)
+            # print(second)
+
+            # sort two list to ensure the order of items in the list is the same
+            first.sort()
+            second.sort()
+
+            # if the first k-2 items are the same
+            if first[:k-2] == second[:k-2]: 
+                first.append(second[-1])
+                candidate_list.append(first)
+            #     print(first)
+            # print("-----\n")
+
+    # print("candidate_list:")
+    # print(candidate_list) ## [['Key-chain', 'Mango'], ['Key-chain', 'Yo-yo'], ['Key-chain', 'Eggs'], ['Key-chain', 'Onion'], ['Mango', 'Yo-yo'], ['Mango', 'Eggs'], ['Mango', 'Onion'], ['Yo-yo', 'Eggs'], ['Yo-yo', 'Onion'], ['Eggs', 'Onion']]
+    
+    # Prune candidate itemsets containing subsets of length k-1 that are infrequent
+    pruned_candidate_list = []
+    freq_sets_list = []
+    for s in freq_sets:
+        s=list(s)
+        s.sort()
+        freq_sets_list.append(s)
+    # print(freq_sets_list)
+
+    for candidate in candidate_list:
+        all_possible_candidate_subsets = combinations(candidate, k-1)
+
+        passed = True
+
+        # check if all the subsets of the candidate are in freq_sets_list
+        for subset in all_possible_candidate_subsets:
+
+            sorted_subset = list(subset)
+            sorted_subset.sort()
+            if (sorted_subset in freq_sets_list) and (sorted_subset not in pruned_candidate_list):
+                continue
+            else:
+                passed = False
+                break
+        if passed:
+            pruned_candidate_list.append(candidate)
+
+    
+
+    # turn list of frozensets
+    pruned_candidate_list = list(map(frozenset, pruned_candidate_list))
+    # print("pruned_candidate_list:")
+    # print(pruned_candidate_list, "\n\n") ##
+    return pruned_candidate_list
+
 
 
 def loadDataSet(fileName, delim=','):
@@ -145,6 +243,7 @@ def loadDataSet(fileName, delim=','):
 
 def run_apriori(data_path, min_support, verbose=False):
     dataset = loadDataSet(data_path)
+    # print(dataset) ## [['Corn', 'Ice-cream', 'Key-chain', 'Mango', 'Umbrella', 'Yo-yo'], ['Doll', 'Eggs', 'Key-chain', 'Mango', 'Onion', 'Umbrella'], ['Eggs', 'Ice-cream', 'Key-chain', 'Mango', 'Onion', 'Yo-yo'], ['Corn', 'Eggs', 'Key-chain', 'Onion', 'Yo-yo'], ['Apple', 'Doll', 'Mango', 'Nintendo', 'Onion']]
     F, support = apriori(dataset, min_support=min_support, verbose=verbose)
     return F, support
 
@@ -170,8 +269,6 @@ if __name__ == '__main__':
         F, support = run_apriori(sys.argv[1], float(sys.argv[2]), bool_transfer(sys.argv[3]))
     else:
         raise ValueError('Usage: python apriori_templete.py <data_path> <min_support> <is_verbose>')
-    print(F)
-    print(support)
 
     '''
     Example: 
