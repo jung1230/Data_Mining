@@ -40,25 +40,16 @@ def assignCluster(dataSet, k, centroids):
         clusterAssment: list
             assigned cluster id for each data point
     '''
-    #TODO
     clusterAssment = [0] * len(dataSet)
-    # print(centroids) ## [[4.4 3.  1.3 0.2][5.9 3.  5.1 1.8][4.  3.  4.  1.2]]
-    # print(dataSet) ## [[5.4 3.9 1.7 0.4][6.4 3.1 5.5 1.8]....]
-
-    for dataIndex, data in enumerate(dataSet):
-        # print(data) ## [[5.4 3.9 1.7 0.4]]
+    for i in range(len(dataSet)):
         minDist = float('inf')
-        for centroidsIndex, centroid in enumerate(centroids):
-            # calculate Euclidean distance between xi and each of the K centroids
-            dist = np.linalg.norm(data - centroid, 2) # 2 for Euclidean distance(L2 norm)
-            # print(dist)
-            if dist < minDist:
-                minDist = dist
-
-                # Assign xi to the cluster whose centroid is the closest to xi
-                clusterAssment[dataIndex] = centroidsIndex
-    # print(clusterAssment) ## [0, 1, 0, 0, 0, 0...]
-
+        minIndex = -1
+        for j in range(k):
+            distJI = np.sqrt(np.sum(np.power(centroids[j, :] - dataSet[i, :], 2)))
+            if distJI < minDist:
+                minDist = distJI
+                minIndex = j
+        clusterAssment[i] = minIndex
     return clusterAssment
 
 
@@ -74,23 +65,12 @@ def getCentroid(dataSet, k, clusterAssment):
         centroids: cluster centroids
     '''
     
-    #TODO
-    # print(dataSet.shape) ## (150, 4)
-    centroids = np.zeros((k, dataSet.shape[1])) ## [[0. 0. 0. 0.][0. 0. 0. 0.][0. 0. 0. 0.]]
-    # Calculate its centroid as the mean of all the objects in that cluster
-    for centroidsIndex in range(k):
-        #  get all data assigned to this cluster
-        dataInCluster = []
-        for dataIndex, cluster in enumerate(clusterAssment):
-            if cluster == centroidsIndex:
-                # print(dataSet[dataIndex].A1) # turn it into 1D from 2d
-                dataInCluster.append(dataSet[dataIndex].A1)
-        # print(np.array(dataInCluster)) ## [[5.1 3.5 1.4 0.2][4.9 3.  1.4 0.2]...]
-
-        # calculate the mean
-        centroids[centroidsIndex] = np.mean(np.array(dataInCluster), axis=0)
-        # print(centroids[centroidsIndex]) ## [5.006 3.428 1.462 0.246]...
-    
+    n = np.shape(dataSet)[1]
+    centroids = np.asmatrix(np.zeros((k, n)))
+    for cent in range(k):
+        ptsInClust = dataSet[np.nonzero(np.array(clusterAssment) == cent)[0]]
+        if len(ptsInClust) != 0:
+            centroids[cent, :] = np.mean(ptsInClust, axis=0)
     return centroids
 
 
@@ -108,7 +88,7 @@ def kMeans(dataSet, T, k, centroids):
             assigned cluster id for each data point
     '''
     clusterAssment = [0] * len(dataSet)
-    pre_clusters  = [1] * len(dataSet) # previous cluster assignment, check convergence
+    pre_clusters  = [1] * len(dataSet)
 
     i=1
     while i < T and list(pre_clusters) != list(clusterAssment):
