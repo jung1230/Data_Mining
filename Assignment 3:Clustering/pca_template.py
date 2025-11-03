@@ -115,5 +115,6 @@ if __name__ == '__main__':
     lowDDataMat = pca(dataMat)
     
     plot(lowDDataMat, labelMat, figname)
-    
+    # python pca_template.py iris_kmeans_cluster.csv
+    # python pca_template.py yeastgene_kmeans_cluster.csv
 

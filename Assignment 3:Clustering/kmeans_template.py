@@ -145,9 +145,10 @@ if __name__ == '__main__':
 
     data = loadDataSet(data_filename)
     centroids = loadCenterSet(centroid_filename)
-    centroids, clusterAssment = kMeans(data, 12, k, centroids )
+    centroids, clusterAssment = kMeans(data, 7, k, centroids ) # for iris, T=12. For yeast gene, T=7
     print(centroids)
     saveData(save_filename, data, clusterAssment)
 
 
     ### Example: python kmeans_template.py Iris.csv Iris_Initial_Centroids.csv
+    ### Example: python kmeans_template.py YeastGene.csv YeastGene_Initial_Centroids.csv 6
