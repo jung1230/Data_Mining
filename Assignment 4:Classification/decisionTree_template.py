@@ -48,7 +48,27 @@ def splitData(dataSet, axis, value):
             reducedVec = instance[:axis] + instance[axis+1:] # remove the given axis
             subset.append(reducedVec)
     return subset
+def calGini(dataSet):
+    # get number of unique class labels
+    labelCounts = {}
+    for instance in dataSet:
+        label = instance[-1]
+        if label not in labelCounts:
+            labelCounts[label] = 0
+        labelCounts[label] += 1
+    
+    # print(labelCounts) ## {'No': 5, 'Yes': 9}....
 
+
+    Gini_subtrahend = 0.0
+    totalInstances = len(dataSet)
+    for label, count in labelCounts.items():
+        # print(label, count) ## No 3
+        Gini_subtrahend += (count / totalInstances) ** 2
+
+    score = 1 - Gini_subtrahend
+
+    return score
 
 def chooseBestFeature(dataSet):
     '''
@@ -67,7 +87,39 @@ def chooseBestFeature(dataSet):
     '''
     #TODO
 
-    return bestFeatId  
+    # for each feature 𝑖 in the dataset
+    #       calculate gini index on dataset
+    #       for each value of the feature
+    #               subset = splitData(dataset, 𝑖, value)
+    #               calculate gini index on the subset
+    #       calculate Gain for feature 𝑖
+    #  Find the bestGain and the corresponding feature id
+
+    # print(dataSet[0]) ## ['Rainy', 'Hot', 'High', 'FALSE', 'No'],
+    feature_scores = {}
+    
+    for i in range(len(dataSet[0]) - 1):  
+        Gini = calGini(dataSet)
+        
+        # find unique values of the current feature column
+        feature_values = set() # set ensure uniqueness
+        for instance in dataSet:
+            feature_values.add(instance[i])
+        # print(feature_values) ## {'Overcast', 'Sunny', 'Rainy'}
+
+        
+        Gini_subtrahend = 0.0
+        for feature_val in feature_values:
+            data_subset = splitData(dataSet, i, feature_val)
+            # print(data_subset) ## ['Hot', 'High', 'FALSE', 'Yes'], ...
+            
+            gini = calGini(data_subset)
+            Gini_subtrahend += (len(data_subset) / len(dataSet)) * gini
+
+        feature_scores[i] = Gini - Gini_subtrahend
+
+    bestFeatId = max(feature_scores, key=feature_scores.get) # key=feature_scores.get means get the value of the dict
+    return bestFeatId 
 
 
 def stopCriteria(dataSet):
@@ -90,6 +142,46 @@ def stopCriteria(dataSet):
     '''
     assignedLabel = None
     # TODO
+
+    # if all the classe labels are the same, then return 
+    # the class label
+    allSame = True
+    for i in range(len(dataSet)-1):
+        # print the class labels
+        # print(dataSet[i][4],"\n")
+        if dataSet[i][-1] != dataSet[i+1][-1]:
+            # class labels are not the same
+            allSame = False
+            break
+    if allSame:
+        assignedLabel = dataSet[0][-1]
+        return assignedLabel
+    
+
+    # if there are no more features to split, then return 
+    # the majority label of the subset.
+    # noMoreFeatures = True
+    # for i in range(len(dataSet)-1):
+    #     for j in range(len(dataSet[i])-1):
+    #         # print the feature values
+    #         print(dataSet[i][j],end=" ")
+    #         if dataSet[i][j] is None:
+    #             # no more features to split
+    #             break
+    #     print("")
+
+    # only class label column left
+    if len(dataSet[0]) == 1: 
+        labelCounts = {}
+        for instance in dataSet:
+            label = instance[-1]
+            if label not in labelCounts:
+                labelCounts[label] = 0
+            labelCounts[label] += 1
+        # majority vote
+        sortedLabelCounts = sorted(labelCounts.items(), key=lambda x: x[1], reverse=True)
+        assignedLabel = sortedLabelCounts[0][0]
+    
 
     return assignedLabel
 
@@ -129,8 +221,10 @@ def buildTree(dataSet, featNames):
 
 
 if __name__ == "__main__":
-    data, featNames = loadDataSet('golf.csv')
+    data, featNames = loadDataSet('car.csv')
     dtTree = buildTree(data, featNames)
     # print (dtTree) 
+
+    # uncommon this to show result
     treeplot.createPlot(dtTree)
     
